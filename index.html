@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fuel Saver</title>
+
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json">
+
+<!-- iOS / Apple PWA tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fuel Saver">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!-- Theme colour for Android Chrome -->
+<meta name="theme-color" content="#0d0d0d">
+
+<!-- Prevent phone number auto-detection -->
+<meta name="format-detection" content="telephone=no">
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --panel: #161616;
+    --border: #2a2a2a;
+    --accent: #f5c542;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+    --green: #4ade80;
+    /* Safe area insets for iPhone notch / Dynamic Island */
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle at 20% 20%, rgba(245,197,66,0.04) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 80%, rgba(255,107,53,0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .container { width: 100%; max-width: 480px; }
+
+  header { text-align: center; margin-bottom: 36px; }
+
+  .logo-icon {
+    font-size: 2.4rem;
+    display: block;
+    margin-bottom: 8px;
+    animation: bob 3s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.2rem;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tank-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+  }
+
+  .tank-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .tank-controls { display: flex; align-items: center; gap: 12px; }
+
+  .tank-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s, background 0.2s;
+    line-height: 1;
+    /* Larger tap target on mobile */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .tank-btn:active { border-color: var(--accent); background: rgba(245,197,66,0.15); }
+
+  .tank-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    min-width: 56px;
+    text-align: center;
+  }
+
+  .prices-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .price-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 16px;
+    transition: border-color 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .price-card.cheaper { border-color: var(--green); }
+
+  .price-card.cheaper::after {
+    content: 'CHEAPER';
+    position: absolute;
+    top: 10px; right: -18px;
+    background: var(--green);
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 3px 22px;
+    transform: rotate(30deg);
+  }
+
+  .card-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .price-input {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    letter-spacing: 0.03em;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    width: 100%;
+    caret-color: var(--accent);
+    /* iOS number input fixes */
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .price-input::placeholder { color: #333; }
+
+  .per-litre { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+  .fill-cost {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    color: var(--accent);
+    margin-top: 10px;
+    letter-spacing: 0.04em;
+    min-height: 1.4em;
+  }
+
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .section-divider::before,
+  .section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .result {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: center;
+    transition: all 0.4s;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result.active {
+    border-color: rgba(245,197,66,0.4);
+    background: linear-gradient(135deg, rgba(245,197,66,0.06), rgba(255,107,53,0.04));
+  }
+
+  .result-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .result-saving {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.8rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .result-sub { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+  .result-sub span { color: var(--green); font-weight: 500; }
+  .result-empty { color: #2a2a2a; font-size: 0.9rem; }
+
+  .tiles {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .tile {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 10px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .tile.show { opacity: 1; transform: translateY(0); }
+  .tile:nth-child(2) { transition-delay: 0.06s; }
+  .tile:nth-child(3) { transition-delay: 0.12s; }
+  .tile.highlight { border-color: rgba(74,222,128,0.4); }
+
+  .tile-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+  }
+  .tile.highlight .tile-value { color: var(--green); }
+
+  .tile-label {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .spend-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+  }
+
+  .spend-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .spend-input-wrap { display: flex; align-items: baseline; gap: 4px; }
+
+  .spend-dollar {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+  }
+
+  .spend-input {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.05em;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    outline: none;
+    color: var(--accent);
+    width: 64px;
+    text-align: center;
+    caret-color: var(--accent);
+    padding-bottom: 2px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .reset-btn {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .reset-btn:active { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Offline banner */
+  .offline-banner {
+    display: none;
+    position: fixed;
+    top: calc(8px + var(--safe-top));
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 20px;
+    z-index: 100;
+  }
+  .offline-banner.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offlineBanner">&#9899; Offline — cached</div>
+
+<div class="container">
+
+  <header>
+    <span class="logo-icon">&#9981;</span>
+    <h1>Fuel Saver</h1>
+    <p class="subtitle">Fill cost comparison</p>
+  </header>
+
+  <div class="tank-row">
+    <span class="tank-label">&#128705; Tank size</span>
+    <div class="tank-controls">
+      <button class="tank-btn" id="tankDown">&#8722;</button>
+      <span class="tank-value" id="tankDisplay">60 L</span>
+      <button class="tank-btn" id="tankUp">&#43;</button>
+    </div>
+  </div>
+
+  <div class="prices-row">
+    <div class="price-card" id="card-a">
+      <div class="card-label">Station A</div>
+      <input class="price-input" id="priceA" type="number" min="0" step="0.1"
+             placeholder="199.9" inputmode="decimal">
+      <div class="per-litre">cents per litre</div>
+      <div class="fill-cost" id="fillA"></div>
+    </div>
+    <div class="price-card" id="card-b">
+      <div class="card-label">Station B</div>
+      <input class="price-input" id="priceB" type="number" min="0" step="0.1"
+             placeholder="189.9" inputmode="decimal">
+      <div class="per-litre">cents per litre</div>
+      <div class="fill-cost" id="fillB"></div>
+    </div>
+  </div>
+
+  <div class="section-divider">fill saving</div>
+
+  <div class="result" id="result">
+    <div class="result-empty">Enter prices above to see your saving</div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile" id="bd1"><div class="tile-value" id="bdCPL">&#8212;</div><div class="tile-label">&#162; per litre</div></div>
+    <div class="tile" id="bd2"><div class="tile-value" id="bdSave">&#8212;</div><div class="tile-label">per fill</div></div>
+    <div class="tile" id="bd3"><div class="tile-value" id="bdYear">&#8212;</div><div class="tile-label">per year*</div></div>
+  </div>
+
+  <div class="section-divider" style="margin-top:20px;">litres for fixed spend</div>
+
+  <div class="spend-row">
+    <span class="spend-label">&#128181; Fixed spend</span>
+    <div class="spend-input-wrap">
+      <span class="spend-dollar">$</span>
+      <input class="spend-input" id="spendAmt" type="number" min="1" step="5"
+             value="50" inputmode="decimal">
+    </div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile" id="li1"><div class="tile-value" id="liA">&#8212;</div><div class="tile-label">Stn A litres</div></div>
+    <div class="tile" id="li2"><div class="tile-value" id="liB">&#8212;</div><div class="tile-label">Stn B litres</div></div>
+    <div class="tile" id="li3"><div class="tile-value" id="liExtra">&#8212;</div><div class="tile-label">extra litres</div></div>
+  </div>
+
+  <button class="reset-btn" id="resetBtn">&#8635; Reset</button>
+
+</div>
+
+<script>
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').then(function(reg) {
+        console.log('SW registered:', reg.scope);
+      }).catch(function(err) {
+        console.log('SW registration failed:', err);
+      });
+    });
+  }
+
+  // Offline indicator
+  var offlineBanner = document.getElementById('offlineBanner');
+  function updateOnlineStatus() {
+    offlineBanner.classList.toggle('show', !navigator.onLine);
+  }
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+
+  // App logic
+  var tankSize = 60;
+
+  var tankDisplay = document.getElementById('tankDisplay');
+  var priceA      = document.getElementById('priceA');
+  var priceB      = document.getElementById('priceB');
+  var fillAEl     = document.getElementById('fillA');
+  var fillBEl     = document.getElementById('fillB');
+  var resultEl    = document.getElementById('result');
+  var cardAEl     = document.getElementById('card-a');
+  var cardBEl     = document.getElementById('card-b');
+  var bd1         = document.getElementById('bd1');
+  var bd2         = document.getElementById('bd2');
+  var bd3         = document.getElementById('bd3');
+  var bdCPL       = document.getElementById('bdCPL');
+  var bdSave      = document.getElementById('bdSave');
+  var bdYear      = document.getElementById('bdYear');
+  var spendAmt    = document.getElementById('spendAmt');
+  var li1         = document.getElementById('li1');
+  var li2         = document.getElementById('li2');
+  var li3         = document.getElementById('li3');
+  var liAEl       = document.getElementById('liA');
+  var liBEl       = document.getElementById('liB');
+  var liExtraEl   = document.getElementById('liExtra');
+
+  document.getElementById('tankDown').addEventListener('click', function() {
+    if (tankSize > 10) { tankSize -= 5; update(); }
+  });
+  document.getElementById('tankUp').addEventListener('click', function() {
+    if (tankSize < 200) { tankSize += 5; update(); }
+  });
+  priceA.addEventListener('input', update);
+  priceB.addEventListener('input', update);
+  spendAmt.addEventListener('input', update);
+
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    priceA.value   = '';
+    priceB.value   = '';
+    spendAmt.value = '50';
+    tankSize = 60;
+    update();
+  });
+
+  function fmt(v) { return '$' + v.toFixed(2); }
+
+  function show(tiles) {
+    tiles.forEach(function(el, i) {
+      setTimeout(function() { el.classList.add('show'); }, i * 60 + 10);
+    });
+  }
+
+  function hide(tiles) {
+    tiles.forEach(function(el) {
+      el.classList.remove('show');
+      el.classList.remove('highlight');
+    });
+  }
+
+  function update() {
+    tankDisplay.textContent = tankSize + ' L';
+
+    var a = parseFloat(priceA.value);
+    var b = parseFloat(priceB.value);
+    var costA = isNaN(a) ? null : (a / 100) * tankSize;
+    var costB = isNaN(b) ? null : (b / 100) * tankSize;
+
+    fillAEl.textContent = costA !== null ? fmt(costA) + ' fill' : '';
+    fillBEl.textContent = costB !== null ? fmt(costB) + ' fill' : '';
+
+    cardAEl.classList.toggle('cheaper', costA !== null && costB !== null && costA < costB);
+    cardBEl.classList.toggle('cheaper', costA !== null && costB !== null && costB < costA);
+
+    // Fill saving
+    if (costA === null || costB === null) {
+      resultEl.classList.remove('active');
+      resultEl.innerHTML = '<div class="result-empty">Enter prices above to see your saving</div>';
+      hide([bd1, bd2, bd3]);
+    } else {
+      var diff = Math.abs(costA - costB);
+      if (diff === 0) {
+        resultEl.classList.remove('active');
+        resultEl.innerHTML = '<div class="result-label">Comparison</div>'
+          + '<div style="font-size:1.4rem;font-family:\'Bebas Neue\',sans-serif;letter-spacing:0.06em;color:var(--muted)">Same price</div>'
+          + '<div class="result-sub">Both stations charge the same</div>';
+        hide([bd1, bd2, bd3]);
+      } else {
+        var cheaper = costA < costB ? 'Station A' : 'Station B';
+        resultEl.classList.add('active');
+        resultEl.innerHTML = '<div class="result-label">You save at ' + cheaper + '</div>'
+          + '<div class="result-saving">' + fmt(diff) + '</div>'
+          + '<div class="result-sub">per <span>' + tankSize + 'L fill</span></div>';
+        bdCPL.textContent  = Math.abs(a - b).toFixed(1) + '\u00a2';
+        bdSave.textContent = fmt(diff);
+        bdYear.textContent = fmt(diff * 52);
+        show([bd1, bd2, bd3]);
+      }
+    }
+
+    // Fixed spend / litres
+    var spend = parseFloat(spendAmt.value);
+    var litA  = (!isNaN(a) && a > 0 && !isNaN(spend) && spend > 0) ? spend / (a / 100) : null;
+    var litB  = (!isNaN(b) && b > 0 && !isNaN(spend) && spend > 0) ? spend / (b / 100) : null;
+
+    if (litA !== null || litB !== null) {
+      liAEl.textContent = litA !== null ? litA.toFixed(1) + 'L' : '\u2014';
+      liBEl.textContent = litB !== null ? litB.toFixed(1) + 'L' : '\u2014';
+
+      if (litA !== null && litB !== null) {
+        liExtraEl.textContent = '+' + Math.abs(litA - litB).toFixed(1) + 'L';
+        li1.classList.toggle('highlight', litA > litB);
+        li2.classList.toggle('highlight', litB > litA);
+        li3.classList.add('highlight');
+      } else {
+        liExtraEl.textContent = '\u2014';
+        li1.classList.remove('highlight');
+        li2.classList.remove('highlight');
+        li3.classList.remove('highlight');
+      }
+      show([li1, li2, li3]);
+    } else {
+      liAEl.textContent     = '\u2014';
+      liBEl.textContent     = '\u2014';
+      liExtraEl.textContent = '\u2014';
+      hide([li1, li2, li3]);
+    }
+  }
+
+  update();
+</script>
+</body>
+</html>
